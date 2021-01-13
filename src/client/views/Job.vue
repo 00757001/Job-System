@@ -55,7 +55,7 @@ v-card.wrapper(tile, height="100%")
                     outlined,
                     color="primary",
                     width="70%",
-                    :to="`/job/${id}/apply`"
+                    @click="apply"
                 ) 我要應徵
 </template>
 
@@ -86,7 +86,8 @@ export default class extends Vue {
         title: '',
         content: '',
         tags: [],
-        time: []
+        time: [],
+        publisher:''
     }
 
     headers = [
@@ -124,27 +125,19 @@ export default class extends Vue {
         }
     }
 
+     get name() {
+        return this.account?._id.toString()
+    }
     async apply() {
         if(!this.isLogin){
             sendMessage('請先登入')
             this.$router.replace('/login')
         }
-
+        else if(this.name === this.job.publisher){
+            sendMessage('不能應徵自己刊登的工作', { color: 'error' })
+        }
         else{
-            let { status } = await axios.post('/api/applyment', {
-            job: this.$route.params.id,
-            resume: '履歷...'
-            })
-
-            switch (status) {
-                case 201:
-                    // this.$router.push('')
-                    sendMessage('應徵成功')
-                    break
-
-                default:
-
-            }
+             this.$router.push(`/job/${this.id}/apply`)
         } 
     }
 
