@@ -20,7 +20,7 @@ v-card.wrapper(tile, height="100%")
 
             v-row
                 v-col 
-                    TagPicker(readOnly, ref="tagPicker", label="標籤")
+                    TagPicker(readOnly, label="標籤", v-model="job.tags")
 
             v-row
                 v-col
@@ -54,25 +54,24 @@ v-card.wrapper(tile, height="100%")
                     outlined,
                     color="primary",
                     width="70%",
-                    @click="apply",
-                    v-if="!isApplied"
-                    :to="`/job/${id}/apply`"
+                    :to="`/job/${id}/apply`",
+                    :disabled="!canApply"
                 ) 我要應徵
-                
-                span(v-else)
-                    v-btn(
-                        outlined,
-                        color="red",
-                        @click="abandon",
-                        v-if="isApplied.state == 0 || isApplied.state == 1"
-                    ) 放棄
 
-                    v-btn(
-                        outlined,
-                        color="primary",
-                        @click="confirm",
-                        v-if="isApplied.state == 1"
-                    ) 確認
+                //- span(v-else)
+                //-     v-btn(
+                //-         outlined,
+                //-         color="red",
+                //-         @click="abandon",
+                //-         v-if="isApplied.state == 0 || isApplied.state == 1"
+                //-     ) 放棄
+
+                //-     v-btn(
+                //-         outlined,
+                //-         color="primary",
+                //-         @click="confirm",
+                //-         v-if="isApplied.state == 1"
+                //-     ) 確認
 </template>
 
 <script lang="ts">
@@ -85,6 +84,7 @@ import { sendMessage } from '../sysmsg'
 import TagPicker from '@/client/components/TagPicker.vue'
 import RichTextEditor from '@/client/components/RichTextEditor.vue'
 import router from '@/server/routes/api/applyment'
+import { ApplymentState } from '@/server/enums'
 
 const Account = namespace('Account')
 
@@ -96,7 +96,6 @@ export default class extends Vue {
     @Account.Action unfavorite!: Function
 
     @Ref() editor!: RichTextEditor
-    @Ref() tagPicker!: TagPicker
 
     job: any = {
         title: '',
@@ -106,11 +105,7 @@ export default class extends Vue {
         publisher:''
     }
 
-    isApplied: any = {
-        state: Number
-    }
-
-    applymentsByJob: IApplyment[] = []
+    isApplied = true
 
     headers = [
         { text: '星期(幾)', value: 'weekday', align: 'center' },
@@ -126,9 +121,16 @@ export default class extends Vue {
         return this.account.favorite!.findIndex((x: any) => x == this.id) != -1
     }
 
+    get canApply() {
+        let x = true
+        x = x && this.account?._id != this.job.publisher
+        x = x && !this.job.finish
+        x = x && !this.isApplied
+        return x
+    }
+
     setData(job: IJob) {
         this.job = job
-        this.tagPicker.setData(job.tags)
         this.editor.setContent(job.content!)
         this.editor.refresh()
     }
@@ -188,12 +190,19 @@ export default class extends Vue {
                 break
             default:
                 sendMessage('未知的錯誤', { color: 'error' })
+    async checkIsApplied() {
+        const { status, data } = await axios.get('/api/applyment', { params: { job: this.id } })
+        if (status == 200) {
+            let applyments: any[] = data
+            this.isApplied = applyments.some(x => {
+                return x.applicant._id == this.account._id && x.state! <= ApplymentState.Confirmed
+            })
         }
     }
 
     mounted() {
         this.loadJob()
-        this.getApplyments()
+        this.checkIsApplied()
     }
 }
 </script>

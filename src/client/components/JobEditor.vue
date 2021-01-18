@@ -1,11 +1,9 @@
 <template lang="pug">
-v-card(flat style="padding-bottom: 56px")
+v-card(flat, style="padding-bottom: 56px")
     v-card-text
         v-text-field(label="標題", v-model="title")
-
         RichTextEditor(height="calc(100vh - 250px)", ref="content")
-
-        TagPicker.mt-2(ref="tags", label="搜尋標籤")
+        TagPicker.mt-2(label="搜尋標籤", :allow-create="true", v-model="tags")
 
         v-card(outlined, flat)
             v-data-table(
@@ -37,6 +35,7 @@ v-card(flat style="padding-bottom: 56px")
                                     dense,
                                     outlined,
                                     label="星期(幾)",
+                                    prepend-icon="mdi-calendar-range",
                                     :items="addTimeDialog.weekdays",
                                     v-model="addTimeDialog.weekday"
                                 )
@@ -82,7 +81,6 @@ import { IJob } from '@/server/models'
 
 @Component({ components: { RichTextEditor, TimePicker, TagPicker } })
 export default class extends Vue {
-    @Ref() tags!: TagPicker
     @Ref() content!: RichTextEditor
 
     timeHeaders = [
@@ -93,7 +91,9 @@ export default class extends Vue {
     ]
 
     title = ''
+    valid = false
     time: any[] = []
+    tags: string[] = []
 
     addTimeDialog = {
         show: false,
@@ -141,21 +141,14 @@ export default class extends Vue {
             title: this.title,
             time: this.time,
             content: this.content.getContent(),
-            tags: this.tags.getData()
+            tags: this.tags
         }
     }
-    //if modify 才呼叫
-    // setData(data:any){
-    //     this.title = data.title
-    //     this.times = data.time
-    //     this.textContent.setContent(data.content)
-    //     //缺tag
-    // }
 
     setData(job: IJob) {
         this.title = job.title
         this.content.setContent(job.content!)
-        this.tags.setData(job.tags)
+        this.tags = job.tags
         this.time = job.time
     }
 

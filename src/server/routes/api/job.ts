@@ -1,3 +1,4 @@
+import { deleteByJob } from '@/server/applyment'
 import { auth, findJob, required } from '@/server/middlewares'
 import { Account, Job } from '@/server/models'
 import * as tags from '@/server/tags'
@@ -21,15 +22,6 @@ router.post('/', auth, required('data'), async (req, res) => {
     } catch (error) {
         console.error(error)
     }
-})
-
-
-router.get('/favorite', auth, async (req, res) => {
-    let jobs = await Account
-        .findById(req.account!.id, 'favorite')
-        .populateTs('favorite')
-
-    res.status(200).json(jobs!.favorite)
 })
 
 // 搜尋工作
@@ -97,8 +89,14 @@ router.get('/search', async (req, res) => {
             },
             finish: false
         })
-        console.log("jobsWithTags: ", jobsWithTags)
+        // console.log("jobsWithTags: ", jobsWithTags)
         intersection = result//.map((x)=>x._id)
+    }else{
+        // console.log("search => all")
+        let allJobs = await Job.find({
+            finish: false
+        })
+        intersection = allJobs
     }
 
     res.status(200).json(intersection);
@@ -148,6 +146,7 @@ router.put('/:id', auth, findJob, required('data'), async (req, res) => {
 router.delete('/:id', auth, findJob, async (req, res) => {
     try {
         await req.job!.remove()
+        await deleteByJob(req.params.id)
         res.status(204).json()
     } catch (error) {
         console.error(error)
@@ -179,7 +178,7 @@ router.post('/:id/unfavorite', auth, async (req, res) => {
     }
 })
 
-router.get('/:id/finish', auth, findJob, async (req, res) => {
+router.post('/:id/finish', auth, findJob, async (req, res) => {
     try {
         await req.job!.updateOne({
             finish: true
